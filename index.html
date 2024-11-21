@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exploring Mars</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        header {
+            text-align: center;
+            background-color: #e44d26;
+            color: white;
+            padding: 1rem;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+        }
+        header p {
+            margin: 0.5rem 0;
+            font-size: 1rem;
+        }
+        .container {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            height: calc(100vh - 100px); /* Ajusta la altura total */
+        }
+        .card {
+            width: 30%;
+            margin: 0.5rem;
+            text-align: center;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 0.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+        }
+        h2 {
+            font-size: 1.2rem;
+            margin: 0.5rem 0;
+        }
+        p {
+            font-size: 0.9rem;
+            margin: 0.5rem 0;
+        }
+        footer {
+            text-align: center;
+            padding: 0.5rem;
+            background-color: #333;
+            color: white;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Welcome to Mars Exploration</h1>
+        <p>Discover the beauty and mystery of the Red Planet</p>
+    </header>
+
+    <div class="container">
+        <div class="card">
+            <h2>The Mars Rover</h2>
+            <img src="./images/mars-rover.jpg" alt="Mars Rover">
+            <p>Rovers are robotic explorers that travel the Martian surface, conducting experiments and sending back data to Earth.</p>
+        </div>
+
+        <div class="card">
+            <h2>Rocket to Mars</h2>
+            <img src="./images/mars-rocket.jpg" alt="Rocket on Mars">
+            <p>Launching to Mars is a thrilling venture. Rockets carry rovers and supplies to explore the unknown terrain.</p>
+        </div>
+
+        <div class="card">
+            <h2>Hello from Mars!</h2>
+            <img src="./images/hello-mars.jpg" alt="Hello Mars">
+            <p>Exploration inspires us to dream big. Say hello to the wonders of Mars!</p>
+        </div>
+    </div>
+
+    <footer>
+        <p>Designed by Freepik | Exploring Mars Together</p>
+    </footer>
+</body>
+</html>
