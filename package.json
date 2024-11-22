@@ -6,7 +6,7 @@
     "scripts": {
       "start": "node server.js"
     },
-    "author": "Your Name",
+    "author": "Sergi Sigro Barruz",
     "license": "MIT",
     "dependencies": {
       "express": "^4.17.1",

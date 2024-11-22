@@ -4,18 +4,19 @@ This repository demonstrates how to create a simple web application with a Node.
 
 ## Table of Contents
 
-- [Introduction](#introduction)
-- [Architecture](#architecture)
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Configuration Details](#configuration-details)
-  - [Node.js Application](#nodejs-application)
-  - [Docker Setup](#docker-setup)
-  - [Nginx Configuration](#nginx-configuration)
-- [Customization](#customization)
-- [Contributing](#contributing)
-- [License](#license)
+- [Nginx Reverse Proxy with HTTPS using Docker and Docker Compose](#nginx-reverse-proxy-with-https-using-docker-and-docker-compose)
+  - [Table of Contents](#table-of-contents)
+  - [Introduction](#introduction)
+  - [Architecture](#architecture)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Usage](#usage)
+  - [Configuration Details](#configuration-details)
+    - [Node.js Application](#nodejs-application)
+    - [Docker Setup](#docker-setup)
+    - [Nginx Configuration](#nginx-configuration)
+  - [Customization](#customization)
+  - [License](#license)
 
 ## Introduction
 
@@ -42,6 +43,8 @@ Client ---> Nginx Reverse Proxy (HTTPS) ---> [ app1 | app2 | app3 ]
 
 - **Docker** installed on your machine. [Install Docker](https://docs.docker.com/get-docker/)
 - **Docker Compose** for container orchestration. [Install Docker Compose](https://docs.docker.com/compose/install/)
+- **Nginx** installed on your machine. [Install Nginx](https://nginx.org/en/)
+- **NodeJS** installed on your machine for backend and web server. [Install NodeJS](https://nodejs.org/en/)
 
 ## Installation
 
@@ -58,7 +61,7 @@ Client ---> Nginx Reverse Proxy (HTTPS) ---> [ app1 | app2 | app3 ]
    docker-compose up -d
    ```
 
-   This command will build the Node.js application image, create three instances, and set up the Nginx reverse proxy.
+   This command will build the Node.js application image, create three instances.
 
 ## Usage
 
@@ -82,15 +85,21 @@ The simple Node.js application is located in the `app` directory.
 
   ```javascript
   const express = require('express');
+  const path = require('path');
   const app = express();
   const port = 3000;
 
-  app.get('/', (req, res) => {
-    res.send('Hello from Node.js app!');
-  });
+  const replicaApp = process.env.APP_NAME
+
+  app.use('/images', express.static(path.join(__dirname, 'images')));
+
+  app.use('/',(req, res) => {
+      res.sendFile(path.join(__dirname, 'index.html'));
+      console.log(`Request served by ${replicaApp}`);
+  }); 
 
   app.listen(port, () => {
-    console.log(`App listening at http://localhost:${port}`);
+      console.log(`${replicaApp} is listening on port ${port}`);
   });
   ```
 
@@ -98,29 +107,39 @@ The simple Node.js application is located in the `app` directory.
 
   ```json
   {
-    "name": "node-app",
-    "version": "1.0.0",
-    "description": "Simple Node.js application",
-    "main": "server.js",
-    "scripts": {
-      "start": "node server.js"
-    },
-    "dependencies": {
-      "express": "^4.17.1"
-    }
-  }
+      "name": "nginx-crash-course",
+      "version": "1.0.0",
+      "description": "A Node.js application serving a static HTML file, used for load balancing with NGINX.",
+      "main": "server.js",
+      "scripts": {
+        "start": "node server.js"
+      },
+      "author": "Sergi Sigro Barruz",
+      "license": "MIT",
+      "dependencies": {
+        "express": "^4.17.1",
+        "path": "^0.12.7"
+      }
+    }  
   ```
 
 - **app/Dockerfile**
 
   ```dockerfile
   FROM node:14
-  WORKDIR /usr/src/app
-  COPY package*.json ./
+
+  WORKDIR /app
+
+  COPY server.js .
+  COPY index.html .
+  COPY images ./images
+  COPY package.json .
+
   RUN npm install
-  COPY . .
+
   EXPOSE 3000
-  CMD [ "npm", "start" ]
+
+  CMD [ "node","server.js" ]
   ```
 
 ### Docker Setup
@@ -129,34 +148,25 @@ The simple Node.js application is located in the `app` directory.
 
   ```yaml
   version: '3'
-
   services:
-    app:
-      build: ./app
+    app1:
+      build: .
       environment:
-        - NODE_ENV=production
-      deploy:
-        replicas: 3
-      expose:
-        - "3000"
-      networks:
-        - webnet
-
-    nginx:
-      image: nginx
+        - APP_NAME=App1
       ports:
-        - "80:80"
-        - "443:443"
-      volumes:
-        - ./nginx/conf.d:/etc/nginx/conf.d
-        - ./nginx/certs:/etc/nginx/certs
-      depends_on:
-        - app
-      networks:
-        - webnet
-
-  networks:
-    webnet:
+        - "3001:3000"
+    app2:
+      build: .
+      environment:
+        - APP_NAME=App2
+      ports:
+        - "3002:3000"
+    app3:
+      build: .
+      environment:
+        - APP_NAME=App3
+      ports:
+        - "3003:3000"
   ```
 
 ### Nginx Configuration
@@ -164,29 +174,51 @@ The simple Node.js application is located in the `app` directory.
 - **nginx/conf.d/default.conf**
 
   ```nginx
-  upstream app_servers {
-      server app:3000;
+    # Main context (this is the global configuration)
+  worker_processes 1;
+
+  events {
+      worker_connections 1024;
   }
 
-  server {
-      listen 80;
-      server_name localhost;
+  http {
+      include mime.types;
 
-      location / {
-          return 301 https://$host$request_uri;
+      # Upstream block to define the Node.js backend servers
+      upstream nodejs_cluster {
+          server 127.0.0.1:3001;
+          server 127.0.0.1:3002;
+          server 127.0.0.1:3003;
       }
-  }
 
-  server {
-      listen 443 ssl;
-      server_name localhost;
+      server {
+          # Listen on port 443 for HTTPS
+          listen 443 ssl;  
+          server_name localhost;
 
-      ssl_certificate     /etc/nginx/certs/server.crt;
-      ssl_certificate_key /etc/nginx/certs/server.key;
+          # SSL certificate settings
+          ssl_certificate /Users/sergi/nginx-certs/nginx-selfsigned.crt;
+          ssl_certificate_key /Users/sergi/nginx-certs/nginx-selfsigned.key;
 
-      location / {
-          proxy_pass http://app_servers;
+          # Proxying requests to Node.js cluster
+          location / {
+              proxy_pass http://nodejs_cluster;
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+          }
       }
+
+      # Optional server block for HTTP to HTTPS redirection
+      server {
+          listen 8080;
+          server_name localhost;
+
+          # Redirect all HTTP traffic to HTTPS
+          location / {
+              return 301 https://$host$request_uri;
+          }
+      }
+
   }
   ```
 
@@ -225,10 +257,6 @@ The simple Node.js application is located in the `app` directory.
 - **Use a custom domain:**
 
   Update the `server_name` directive in the Nginx configuration and configure DNS accordingly.
-
-## Contributing
-
-Contributions are welcome! Feel free to open an issue or submit a pull request.
 
 ## License
 
